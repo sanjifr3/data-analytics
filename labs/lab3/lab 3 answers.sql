@@ -192,6 +192,21 @@ from trip
 	WHERE t1.endStation <> t2.startStation
 ) t1 JOIN ( SELECT COUNT(*) countAll from trip) t2
 
+Alternatively
+
+%sql
+SELECT (COUNT(CASE t1.endStation when t2.startStation THEN null ELSE 1 END))/count(t1.bikeID) as bike_relocation_percentage
+FROM (
+select bikeID, startStation, endStation, row_number() OVER (PARTITION BY bikeID ORDER BY startTime ASC) rownum
+from trip
+) t1 INNER JOIN (
+select bikeID, startStation, endStation, row_number() OVER (PARTITION BY bikeID ORDER BY startTime ASC) rownum
+from trip
+) t2
+ON t1.bikeID = t2.bikeID AND t2.rownum = t1.rownum+1
+
+
+
 /* 2.2 Calculate this percentage on an hour by hour basis. Are there hours in which it is more likely to be moved? */
 
 %sql
@@ -225,6 +240,22 @@ ON tt1.hour = tt2.hour
 
 order by tt1.hour ASC
 
+alternatively,
+
+%sql
+
+SELECT t1.hour, (SUM(CASE t1.endStation when t2.startStation THEN null ELSE 1 END))/count(t1.bikeID) AS bike_relocation_percentage
+FROM (
+select bikeID, hour(endTime) hour, startStation, endStation, row_number() OVER (PARTITION BY bikeID ORDER BY startTime ASC) rownum
+from trip
+) t1 INNER JOIN (
+select bikeID, hour(startTime) hour, startStation, endStation, row_number() OVER (PARTITION BY bikeID ORDER BY startTime ASC) rownum
+from trip
+) t2
+ON t1.bikeID = t2.bikeID AND t2.rownum = t1.rownum+1
+GROUP BY t1.hour
+ORDER BY t1.hour
+
 /* 2.3 Are there some bikes are being moved more often that others? Analyze the frequency of ves per bike and find out. */
 
 %sql
@@ -251,6 +282,22 @@ WHERE t1.endStation <> t2.startStation
 GROUP BY t1.bikeID
 
 ORDER BY countMoved DESC
+
+or alternatively,
+
+%sql
+SELECT t1.bikeID, count(1) moves
+FROM (
+select bikeID, hour(endTime) hour, startStation, endStation, row_number() OVER (PARTITION BY bikeID ORDER BY startTime ASC) rownum
+from trip
+) t1 INNER JOIN (
+select bikeID, hour(startTime) hour, startStation, endStation, row_number() OVER (PARTITION BY bikeID ORDER BY startTime ASC) rownum
+from trip
+) t2
+ON t1.bikeID = t2.bikeID AND t2.rownum = t1.rownum+1
+WHERE t1.endStation <> t2.startStation
+GROUP BY t1.bikeID
+ORDER BY moves DESC
 
 
 
@@ -321,6 +368,18 @@ FROM (trip INNER JOIN station s1 ON trip.startStation == s1.stationName) INNER J
 
 LIMIT 10
 
+or alternatively,
+
+%sql
+SELECT T.tripID, T.tripDuration, 
+       T.bikeID, T.subscriberType, T.zipCode,
+       T.startTime, T.startStation, T.startTerminal,
+       sS.longitude as startStationLong, sS.latitude as startStationLat,
+       T.endTime, T.endStation, T.endTerminal,
+       eS.longitude as endStationLong, eS.latitude as endStationLat
+FROM trip T, station sS, Station eS
+WHERE T.startStation = sS.stationName AND T.endStation = eS.stationName
+
 // Save this query as a new table called "trip_station"
 val tripStationDF = sqlContext.sql("SELECT trip.*, s1.latitude startStationLat, s1.longitude startStationLong, s2.latitude endStationLat, s2.longitude endStationLong FROM (trip INNER JOIN station s1 ON trip.startStation == s1.stationName) INNER JOIN station s2 ON trip.endStation == s2.stationName")
 
@@ -388,6 +447,20 @@ WHERE distRank <= 5
 
 ORDER BY startStation, distRank ASC
 
+alternatively,
+
+%sql
+SELECT *
+FROM ( SELECT 
+         startStation,
+         greatCircleDistance(startStationLat, startStationLong, endStationLat, endStationLong) gcDist,
+         row_number() OVER (PARTITION BY startStation ORDER BY greatCircleDistance(startStationLat, startStationLong, endStationLat,             endStationLong) desc) AS rank
+      FROM
+         trip_station
+     ) tmp
+WHERE 
+  rank <= 5
+
 /* 4.3. First, lets calcuate the station activity for each station. In order to do these query we need to get a list of (tripDuration, stationID) tuples, where stationID is either startStationID or endStationID. To do this, we will use UNION. We create a relation of (tripDuration, stationID) where stationID is startStationID, and a relation of (tripDuration, stationID) where stationID is endStationID and we UNION the two relations. Then we can sum the tripDuration for each station. */
 
 %sql
@@ -442,7 +515,82 @@ GROUP BY station
 
 ORDER BY longestTrip DESC
 
+or alternatively,
+
+%sql
+SELECT station, gcDist
+FROM (
+    SELECT 
+        station, 
+        gcDist, 
+        row_number() OVER (PARTITION BY station ORDER BY gcDist desc) AS rank
+    FROM
+    (
+        SELECT greatCircleDistance(startStationLat, startStationLong, endStationLat, endStationLong) as gcDist, startStation as               station
+        FROM trip_station
+        UNION
+        SELECT greatCircleDistance(startStationLat, startStationLong, endStationLat, endStationLong) as gcDist, endStation as                 station
+        FROM trip_station
+    ) tmp
+)
+WHERE 
+    rank == 1
+ORDER BY gcDist DESC
+
 /* 6. Use the additional dataset "201608_weather_data.csv", perform an exploratory data analysis and look for interesting patterns. Specifically, you can look into the relation between good/bad weather and the trip distance or trip length */
+
+// Read in weather data
+val weatherRDD = sc.textFile("/resources/data/babs/201608_weather_data.csv").map(line => line.split(",", -1).map(_.trim)).filter(line => line(0) != "PDT")
+
+// take first row
+weatherRDD.first
+
+// take first 3 rows
+weatherRDD.take(3)
+
+// Fix date
+def fixSimpleDateFormat(orig: String): String = {
+    val fixed_date_parts = orig.split("/").map(part => if (part.size == 1) "0" + part else part)
+    val fixed_date = List(fixed_date_parts(2), fixed_date_parts(0), fixed_date_parts(1)).mkString("-")
+    fixed_date + " " + "00:00:00"
+}
+
+// Clean data
+def getWeatherCleaned(row:Array[String]):Weather = {
+        return Weather(
+            fixSimpleDateFormat(row(0)).toDateOrElse(),
+            row(1).toIntOrElse(),
+            row(2).toIntOrElse(),
+            row(3).toIntOrElse(),
+            row(4).toIntOrElse(),
+            row(5).toIntOrElse(),
+            row(6).toIntOrElse(),
+            row(7).toIntOrElse(),
+            row(8).toIntOrElse(),
+            row(9).toIntOrElse(),
+            row(10).toDoubleOrElse(),
+            row(11).toDoubleOrElse(),
+            row(12).toDoubleOrElse(),
+            row(13).toIntOrElse(),
+            row(14).toIntOrElse(),
+            row(15).toIntOrElse(),
+            row(16).toIntOrElse(),
+            row(17).toIntOrElse(),
+            row(18).toIntOrElse(),
+            row(19).toIntOrElse(),
+            row(20).toIntOrElse(),
+            row(21),
+            row(22).toIntOrElse(),
+            row(23).toIntOrElse()
+        )
+}
+
+// load the data into a DataFrame used for SparkSQL
+val weather = weatherRDD.map(r => getWeatherCleaned(r)).toDF()
+
+// register this data as an SQL table
+weather.createOrReplaceTempView("weather")
+
 
 
 
