@@ -1,0 +1,82 @@
+
+MIE1512 / Invigilated Lab / Marking Scheme
+===========================================
+
+The following breakdown is used to mark your invigilated lab.
+
+Format: Question # [Marks] [Weight]
+
+1.1 [3] [12]
+	SELECT ratio (SUM/COUNT)
+	GROUP BY Month
+	ORDER BY
+
+1.2 [3] [18] (no points reduced for using a wrong constant)
+	SELECT ONLY DATE
+	CORRECT CONDITION ON RATIO
+	GROUP BY DATE
+
+1.3 [2] [18]
+	Results divided to two groups (drunk/not)
+	Ratio calculated correctly for each group
+
+1.4 [6] [24]
+	Results in right format (month, percent), no points reduced for additional information
+	Filter for dark[2] (0 - no filter, 1 - partial dark, 2 - all dark conditions)
+	Group by month
+	Ratio calculated correctly[2] (0 - no ratio, 1 - calculated by not per each month, 2 - calculated per each month)
+
+2.1 [4] [24]
+	Ratio calculated
+	Filtering travelSpeed > speedLimit
+	Filtering invalid speeds [2] (travelSpeed, speedLimit)
+
+2.2 [4] [12] (no points taken for wrong calculation of ratio)
+	Ratio calculated by maker [2] (1 - partial solution)
+	Filter makers < 100
+	Order by
+
+2.3 [6] [12]
+	Window function use [3] (1pt each: function, partition field, order by)
+	Select < 5
+	Filter invalid values
+	For all PersonType in one query
+
+2.4 [3] [12]
+	Select fields
+	Join
+	Group by
+
+3.1 [5] [12]
+	Select fields [2] (1pt each: age-bin, count)
+	Filter invalid values
+	Group by bin
+	Order by
+
+3.2 [3] [12]
+	Right query (similar to previous one)
+	Filter by personType for 4 values [2] (1 - correct filter by personType, 2 - performed all required queries)
+
+3.3 [8] [18]
+	Inner query fields
+	Inner query join
+	inner query filter personType
+	Inner query group by
+	Outer query fields [2] (1pt each: age-bin, ratio)
+	Outer query group by
+	Filter invalid age
+
+3.4 [7] [18]
+	Inner query fields
+	Inner query join
+	Inner query group by
+	Outer query fields [2] (1pt each: year-group, ratio)
+	Outer query group by
+	Filter invalid year values
+
+3.5 [2] [4]
+	0 - no answer, 1 - simple observation, 2 - in-depth observation
+
+
+The notes on Portal are in the format:
+1.1;1.2;1.3;1.4;2.1;2.2;2.3;2.4;3.1;3.2;3.3;3.4;3.5;Comments-Question1;Comments-Question2;Comments-Questions3
