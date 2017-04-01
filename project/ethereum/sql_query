@@ -1,0 +1,52 @@
+%sql
+select * from transfers
+order by transactionHash desc
+
+val table1 = sqlContext.sql("""
+ select transactionHash, sum(1) as count from transfers group by transactionHash having count > 2
+  """)
+table1.createOrReplaceTempView("table1 ")
+sqlContext.cacheTable("table1")
+table1.show()  
+
+val table2 = sqlContext.sql("""
+select sum(1) as super_count, table1.count, table1.transactionHash, fromAccount, toAccount, type, sum(value) as sum_value, transfers.blockNumber 
+from transfers 
+join table1 
+on transfers.transactionHash=table1.transactionHash
+where table1.count > 2
+group by table1.count, table1.transactionHash, fromAccount, toAccount, type, transfers.blockNumber
+order by table1.count desc, transactionHash desc, super_count desc, fromAccount desc, toAccount desc  
+""")
+table2.createOrReplaceTempView("table2 ")
+sqlContext.cacheTable("table2")
+table2.show()  
+
+val table3 = sqlContext.sql("""
+select sum(1) total_count, transactionHash 
+from table2
+group by transactionHash
+order by total_count desc 
+""")
+table3.createOrReplaceTempView("table3 ")
+sqlContext.cacheTable("table3")
+table3.show()  
+
+%sql
+select sum(1) from table3 where total_count >2
+
+%sql
+select total_count, table3.transactionHash, fromAccount, toAccount, type, sum_value from 
+(
+table2 join table3 on table2.transactionHash = table3.transactionHash
+)
+order by table3.total_count desc, table3.transactionHash desc, table2.fromAccount, table2.toAccount
+
+%sql
+select * from transactions
+
+%sql
+select * from redeagletransfers order by value desc
+
+%sql
+select count(distinct(toAccount)) from transfers
