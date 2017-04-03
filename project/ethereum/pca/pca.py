@@ -1,61 +1,62 @@
 import numpy as np
 from sklearn.decomposition import PCA
-from sklearn.decomposition import TruncatedSVD
-import matplotlib.pyplot as plt
 
-X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
-pca = PCA(n_components=2)
-pca.fit(X)
+rows = 20
+columns = 50
+X = np.random.randn(rows, columns)
 
-print(pca.explained_variance_ratio_)
+## Normalize so each row sums to 1
+for i in range(X.shape[0]):
+    X[i,:] = X[i,:] / X[i,:].sum()
 
+## Preprocess so average is removed from each column
+for i in range(X.shape[1]):
+    X[:,i] = X[:,i] - X[:,i].mean()
+
+## SVD
+u,s,v = np.linalg.svd(X,full_matrices=True)
+
+S = np.zeros((rows,columns))
+S[:s.shape[0], :s.shape[0]] = np.diag(s)
+#print(np.allclose(X, np.dot(u, np.dot(S,v))))
+#print(np.dot(u, np.dot(S,v)))
+
+## PCA
 pca = PCA(n_components=2, svd_solver='full')
 pca.fit(X)
-
+#print(pca.explained_variance_)
 print(pca.explained_variance_ratio_)
+print(pca.components_.shape)
+print(v[:,0].shape)
 
-pca = PCA(n_components=1, svd_solver='arpack')
-pca.fit(X)
-
-print(pca.explained_variance_ratio_)
-
-X = np.array([2.5,.5,2.2,1.9,3.1,2.3,2,1,1.5,1.1])
-y = np.array([2.4,0.7,2.9,2.2,3.0,2.7,1.6,1.1,1.6,.9])
-
-plt.scatter(X,y)
-#plt.show()
-
-X_mean = X - X.mean()
-y_mean = y - y.mean()
-
-plt.figure()
-plt.scatter(X_mean, y_mean)
-#plt.show()
-
-matrix = np.vstack((X_mean,y_mean))
-print(matrix)
-
-print(np.cov(matrix))
-
-pca = PCA(n_components=2)
-
-pca.fit(np.cov(matrix))
-
-print (pca.explained_variance_ratio_)
-
-print(pca.components_)
+print(pca.components_.T)
+print(v[:,0:2])
 
 
-plt.figure()
-plt.scatter(X_mean,y_mean)
+# pca = PCA(n_components=1,svd_solver='full')
+# pca.fit(X)
+# print('\n')
+# print(pca.explained_variance_)
+# print(pca.explained_variance_ratio_)
+# #print(pca.components_)
 
-t = np.arange(-2.,2,0.2)
-plt.plot(t, pca.components_[0,0] + pca.components_[0,1]*t,'r')
-plt.plot(t, pca.components_[1,0] + pca.components_[1,1]*t,'g')
-#plt.show()
+# pca = PCA(n_components=2,svd_solver='full')
+# pca.fit(X)
+# print('\n')
+# print(pca.explained_variance_)
+# print(pca.explained_variance_ratio_)
+# #print(pca.components_)
 
-svd = TruncatedSVD()
+# pca = PCA(n_components=3,svd_solver='full')
+# pca.fit(X)
+# print('\n')
+# print(pca.explained_variance_)
+# print(pca.explained_variance_ratio_)
+# print(pca.components_)
 
-svd.fit(matrix)
-
-print(svd.components_)
+# pca = PCA(n_components=4,svd_solver='full')
+# pca.fit(X)
+# print('\n')
+# print(pca.explained_variance_)
+# print(pca.explained_variance_ratio_)
+# #print(pca.components_)
