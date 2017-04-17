@@ -1,8 +1,10 @@
 from etherscan.accounts import Account
 import json
 
-with open('api_key.json', mode='r') as key_file:
+with open('../../api_key.json', mode='r') as key_file:
     key = json.loads(key_file.read())['key']
+
+exit(0)
 
 address = '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
 

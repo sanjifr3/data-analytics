@@ -1,5 +1,11 @@
+project/ethereum/notebooks/data/LT_pca_matrix.csv
+project/ethereum/notebooks/data/AU_pca_matrix.csv
+project/ethereum/notebooks/data/lt_core.csv
+project/ethereum/notebooks/data/au_core.csv
 project/ethereum/client-data/
+
 .idea/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
