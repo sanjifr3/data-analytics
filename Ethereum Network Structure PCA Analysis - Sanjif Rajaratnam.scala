@@ -223,7 +223,7 @@ val relResultsDir = relDir + "results/"
 // MAGIC ## Download Data ##
 // MAGIC # Dowload the data if it doesn't already exist
 // MAGIC if [ ! -f EthereumRawData.tar.lzma ] || [ ! -f EthereumRawData.tar ]; then 
-// MAGIC   curl -L -o "EthereumRawData.tar.lzma" https://www.dropbox.com/s/25gcchhh3uvq8c3/EthereumRawData.tar.lzma?dl=1
+// MAGIC   curl -L -o "EthereumRawData.tar.lzma" https://www.dropbox.com/s/z6i807p34npdo92/EthereumRawData.tar.lzma?dl=1
 // MAGIC fi
 // MAGIC 
 // MAGIC # Extract the file if this hasn't already been done
